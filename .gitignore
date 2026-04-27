@@ -1,0 +1,6 @@
+.env
+azure-functions-collection/local.settings.json
+start_daemon.sh
+key.pub
+*.log
+*/__pycache__/*

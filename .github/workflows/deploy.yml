@@ -1,0 +1,47 @@
+name: Dual Transformer CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-to-control-tower:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Sync Code to Control Tower
+        run: |
+          echo "Code has been seamlessly synced to Control Tower via self-hosted runner!"
+          # 이 Runner 자체가 컨트롤 타워 내부에 설치되어 있으므로 
+          # checkout action만으로도 코드가 B1s 환경에 자동 최신화됩니다.
+
+  trigger-gpu-sync:
+    needs: deploy-to-control-tower
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Pull Latest Code on GPU VM (Spot)
+        uses: azure/CLI@v1
+        with:
+          azcliversion: 2.30.0
+          inlineScript: |
+            # GPU VM이 실행 중일 경우에만 코드를 업데이트하는 로직
+            VM_STATE=$(az vm get-instance-view --name ml-spot-vm --resource-group DualTransformer_RG --query instanceView.statuses[1].code -o tsv || echo "Not Found")
+            
+            if [ "$VM_STATE" == "PowerState/running" ]; then
+              echo "GPU VM is running. Triggering sync..."
+              az vm run-command invoke \
+                -g DualTransformer_RG \
+                -n ml-spot-vm \
+                --command-id RunShellScript \
+                --scripts "cd /home/azureuser/when && git pull origin main"
+            else
+              echo "GPU VM is currently deallocated. It will pull new code upon its next boot orchestraion."
+            fi
