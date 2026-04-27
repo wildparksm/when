@@ -42,7 +42,7 @@ def run_spot_pipeline():
         'az', 'vm', 'run-command', 'invoke',
         '-g', RG_NAME, '-n', VM_NAME,
         '--command-id', 'RunShellScript',
-        '--scripts', 'source ~/.bashrc && cd /home/azureuser/when && git pull origin main && python3 train_harness.py'
+        '--scripts', 'sudo timedatectl set-timezone Asia/Seoul && source ~/.bashrc && cd /home/azureuser/when && git pull origin main && python3 train_harness.py'
     ]
     res = subprocess.run(cmd_run, capture_output=True, text=True)
     logging.info(f"Run-command Output: {res.stdout}")
